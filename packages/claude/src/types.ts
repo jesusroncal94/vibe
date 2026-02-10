@@ -20,3 +20,8 @@ export interface ClaudeResponse {
   model: string;
   durationMs: number;
 }
+
+export interface StreamSession {
+  stream: AsyncGenerator<ClaudeStreamChunk>;
+  abort: () => void;
+}

@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import type { ClaudeOptions, ClaudeStreamChunk, ClaudeResponse } from './types.js';
+import type { ClaudeOptions, ClaudeStreamChunk, ClaudeResponse, StreamSession } from './types.js';
 import { parseStreamLine, parseJsonResponse } from './parser.js';
 
 function buildArgs(prompt: string, options: ClaudeOptions, streaming: boolean): string[] {
@@ -93,6 +93,74 @@ export async function* streamChat(
   }
 
   await iterator;
+}
+
+/**
+ * Create a stream session with abort support.
+ * Returns an AsyncGenerator and an abort() function to kill the process.
+ */
+export function createStreamSession(
+  prompt: string,
+  options: ClaudeOptions = {},
+): StreamSession {
+  const args = buildArgs(prompt, options, true);
+
+  const proc = spawn('claude', args, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env },
+  });
+
+  let buffer = '';
+  const chunks: ClaudeStreamChunk[] = [];
+  let done = false;
+  let aborted = false;
+
+  proc.stdout.on('data', (data: Buffer) => {
+    buffer += data.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      const chunk = parseStreamLine(line);
+      if (chunk) {
+        chunks.push(chunk);
+      }
+    }
+  });
+
+  proc.stderr.on('data', (data: Buffer) => {
+    const errText = data.toString().trim();
+    if (errText && !aborted) {
+      chunks.push({ type: 'error', content: errText });
+    }
+  });
+
+  proc.on('close', () => {
+    if (buffer.trim()) {
+      const chunk = parseStreamLine(buffer);
+      if (chunk) {
+        chunks.push(chunk);
+      }
+    }
+    done = true;
+  });
+
+  async function* generate(): AsyncGenerator<ClaudeStreamChunk> {
+    while (!done || chunks.length > 0) {
+      if (chunks.length > 0) {
+        yield chunks.shift()!;
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
+  }
+
+  function abort() {
+    aborted = true;
+    proc.kill('SIGTERM');
+  }
+
+  return { stream: generate(), abort };
 }
 
 /**

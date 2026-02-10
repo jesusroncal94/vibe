@@ -1,4 +1,4 @@
-export { streamChat, chat } from './client.js';
+export { streamChat, chat, createStreamSession } from './client.js';
 export { parseStreamLine, parseJsonResponse } from './parser.js';
 export type {
   ClaudeModel,
@@ -6,4 +6,5 @@ export type {
   ClaudeStreamChunk,
   ClaudeResponse,
   StreamChunkType,
+  StreamSession,
 } from './types.js';
