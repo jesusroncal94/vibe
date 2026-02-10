@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
-import type { ClaudeOptions, ClaudeStreamChunk, ClaudeResponse, StreamSession } from './types.js';
-import { parseStreamLine, parseJsonResponse } from './parser.js';
+import type { ClaudeOptions, ClaudeStreamChunk, ClaudeResponse, StreamSession } from './types';
+import { parseStreamLine, parseJsonResponse } from './parser';
 
 function buildArgs(prompt: string, options: ClaudeOptions, streaming: boolean): string[] {
   const args: string[] = [

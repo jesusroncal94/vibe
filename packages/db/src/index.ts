@@ -1,5 +1,5 @@
-export * from './schema/index.js';
-export { getDb, type VibeDb } from './client.js';
+export * from './schema/index';
+export { getDb, type VibeDb } from './client';
 export {
   createConversation,
   getConversations,
@@ -17,4 +17,4 @@ export {
   removeTag,
   getSetting,
   setSetting,
-} from './queries.js';
+} from './queries';

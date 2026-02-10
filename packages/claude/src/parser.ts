@@ -1,4 +1,4 @@
-import type { ClaudeStreamChunk } from './types.js';
+import type { ClaudeStreamChunk } from './types';
 
 /**
  * Parse a single line of stream-json output from Claude Code CLI.
