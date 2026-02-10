@@ -1,4 +1,4 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, like, or, sql } from 'drizzle-orm';
 import { generateId } from '@vibe/shared';
 import { getDb } from './client.js';
 import { conversations, messages, tags, conversationTags, settings } from './schema/index.js';
@@ -32,6 +32,79 @@ export function getConversation(id: string) {
 export function deleteConversation(id: string) {
   const db = getDb();
   db.delete(conversations).where(eq(conversations.id, id)).run();
+}
+
+export function renameConversation(id: string, title: string) {
+  const db = getDb();
+  const now = new Date();
+  db.update(conversations)
+    .set({ title, updatedAt: now })
+    .where(eq(conversations.id, id))
+    .run();
+}
+
+export function updateConversationModel(id: string, model: string) {
+  const db = getDb();
+  const now = new Date();
+  db.update(conversations)
+    .set({ model, updatedAt: now })
+    .where(eq(conversations.id, id))
+    .run();
+}
+
+export function getConversationsWithPreview() {
+  const db = getDb();
+  const convos = db
+    .select()
+    .from(conversations)
+    .orderBy(desc(conversations.updatedAt))
+    .all();
+
+  return convos.map((conv) => {
+    const lastMessage = db
+      .select({ content: messages.content, createdAt: messages.createdAt, role: messages.role })
+      .from(messages)
+      .where(eq(messages.conversationId, conv.id))
+      .orderBy(desc(messages.createdAt))
+      .limit(1)
+      .get();
+
+    return {
+      ...conv,
+      lastMessage: lastMessage
+        ? { content: lastMessage.content, createdAt: lastMessage.createdAt, role: lastMessage.role }
+        : null,
+    };
+  });
+}
+
+export function searchConversations(query: string) {
+  const db = getDb();
+  const pattern = `%${query}%`;
+
+  const byTitle = db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(like(conversations.title, pattern))
+    .all()
+    .map((r) => r.id);
+
+  const byContent = db
+    .select({ id: messages.conversationId })
+    .from(messages)
+    .where(like(messages.content, pattern))
+    .all()
+    .map((r) => r.id);
+
+  const uniqueIds = [...new Set([...byTitle, ...byContent])];
+  if (uniqueIds.length === 0) return [];
+
+  return db
+    .select()
+    .from(conversations)
+    .where(or(...uniqueIds.map((id) => eq(conversations.id, id))))
+    .orderBy(desc(conversations.updatedAt))
+    .all();
 }
 
 export function createMessage(data: {
