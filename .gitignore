@@ -15,9 +15,12 @@ out/
 .env.*.local
 
 # Database
+data/
 *.sqlite
 *.sqlite-journal
 *.db
+*.db-wal
+*.db-shm
 
 # IDE
 .vscode/
