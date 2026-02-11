@@ -166,6 +166,28 @@ export function getTags() {
   return db.select().from(tags).all();
 }
 
+export function deleteTag(id: string) {
+  const db = getDb();
+  db.delete(tags).where(eq(tags.id, id)).run();
+}
+
+export function getTagsForConversation(conversationId: string) {
+  const db = getDb();
+  const rows = db
+    .select({ tagId: conversationTags.tagId })
+    .from(conversationTags)
+    .where(eq(conversationTags.conversationId, conversationId))
+    .all();
+
+  if (rows.length === 0) return [];
+
+  return db
+    .select()
+    .from(tags)
+    .where(or(...rows.map((r) => eq(tags.id, r.tagId))))
+    .all();
+}
+
 export function assignTag(conversationId: string, tagId: string) {
   const db = getDb();
   db.insert(conversationTags).values({ conversationId, tagId }).run();
@@ -181,6 +203,11 @@ export function removeTag(conversationId: string, tagId: string) {
       ),
     )
     .run();
+}
+
+export function getAllSettings() {
+  const db = getDb();
+  return db.select().from(settings).all();
 }
 
 export function getSetting(key: string) {

@@ -13,8 +13,11 @@ export {
   getMessages,
   createTag,
   getTags,
+  deleteTag,
+  getTagsForConversation,
   assignTag,
   removeTag,
+  getAllSettings,
   getSetting,
   setSetting,
 } from './queries';
