@@ -5,6 +5,7 @@ export interface ClaudeOptions {
   allowedTools?: string[];
   systemPrompt?: string;
   maxTurns?: number;
+  cwd?: string;
 }
 
 export type StreamChunkType = 'text' | 'tool_use' | 'tool_result' | 'error' | 'done';

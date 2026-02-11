@@ -7,8 +7,43 @@ describe('parseStreamLine', () => {
     expect(parseStreamLine('  ')).toBeNull();
   });
 
-  it('should parse a text chunk', () => {
+  it('should return null for system/init messages', () => {
+    const line = JSON.stringify({ type: 'system', subtype: 'init', session_id: 'abc' });
+    expect(parseStreamLine(line)).toBeNull();
+  });
+
+  it('should parse an assistant message with message.content array', () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      message: {
+        content: [{ type: 'text', text: 'Hello world' }],
+        role: 'assistant',
+      },
+    });
+    const result = parseStreamLine(line);
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe('text');
+    expect(result!.content).toBe('Hello world');
+  });
+
+  it('should parse an assistant message with top-level content fallback', () => {
     const line = JSON.stringify({ type: 'assistant', content: 'Hello world' });
+    const result = parseStreamLine(line);
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe('text');
+    expect(result!.content).toBe('Hello world');
+  });
+
+  it('should join multiple text parts in assistant message', () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      message: {
+        content: [
+          { type: 'text', text: 'Hello ' },
+          { type: 'text', text: 'world' },
+        ],
+      },
+    });
     const result = parseStreamLine(line);
     expect(result).not.toBeNull();
     expect(result!.type).toBe('text');
@@ -23,10 +58,11 @@ describe('parseStreamLine', () => {
   });
 
   it('should parse a result chunk as done', () => {
-    const line = JSON.stringify({ type: 'result', content: 'Final answer' });
+    const line = JSON.stringify({ type: 'result', subtype: 'success', result: 'Final answer' });
     const result = parseStreamLine(line);
     expect(result).not.toBeNull();
     expect(result!.type).toBe('done');
+    expect(result!.content).toBe('Final answer');
   });
 
   it('should parse an error chunk', () => {
@@ -34,9 +70,10 @@ describe('parseStreamLine', () => {
     const result = parseStreamLine(line);
     expect(result).not.toBeNull();
     expect(result!.type).toBe('error');
+    expect(result!.content).toBe('Something went wrong');
   });
 
-  it('should handle a result string field', () => {
+  it('should handle a result string field (no type)', () => {
     const line = JSON.stringify({ result: 'Plain text response' });
     const result = parseStreamLine(line);
     expect(result).not.toBeNull();
@@ -49,6 +86,20 @@ describe('parseStreamLine', () => {
     expect(result).not.toBeNull();
     expect(result!.type).toBe('text');
     expect(result!.content).toBe('Some plain text output');
+  });
+
+  it('should return null for assistant message with no text content', () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      message: { content: [{ type: 'tool_use', id: 'abc' }] },
+    });
+    const result = parseStreamLine(line);
+    expect(result).toBeNull();
+  });
+
+  it('should return null for unknown types', () => {
+    const line = JSON.stringify({ type: 'unknown_event', data: 'foo' });
+    expect(parseStreamLine(line)).toBeNull();
   });
 });
 

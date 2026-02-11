@@ -1,6 +1,29 @@
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import type { ClaudeOptions, ClaudeStreamChunk, ClaudeResponse, StreamSession } from './types';
 import { parseStreamLine, parseJsonResponse } from './parser';
+
+let _claudePath: string | null = null;
+
+function getClaudePath(): string {
+  if (_claudePath) return _claudePath;
+  try {
+    _claudePath = execSync('which claude', { encoding: 'utf-8' }).trim();
+  } catch {
+    _claudePath = 'claude';
+  }
+  return _claudePath;
+}
+
+function spawnClaude(args: string[], cwd?: string) {
+  const proc = spawn(getClaudePath(), args, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env },
+    cwd,
+  });
+  // Close stdin so CLI doesn't wait for interactive input
+  proc.stdin.end();
+  return proc;
+}
 
 function buildArgs(prompt: string, options: ClaudeOptions, streaming: boolean): string[] {
   const args: string[] = [
@@ -10,6 +33,11 @@ function buildArgs(prompt: string, options: ClaudeOptions, streaming: boolean): 
     '--model',
     options.model ?? 'claude-sonnet-4-5',
   ];
+
+  // --verbose is required when using --print with stream-json
+  if (streaming) {
+    args.push('--verbose');
+  }
 
   if (options.allowedTools?.length) {
     args.push('--allowedTools', options.allowedTools.join(','));
@@ -37,10 +65,7 @@ export async function* streamChat(
 ): AsyncGenerator<ClaudeStreamChunk> {
   const args = buildArgs(prompt, options, true);
 
-  const proc = spawn('claude', args, {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env },
-  });
+  const proc = spawnClaude(args, options.cwd);
 
   let buffer = '';
 
@@ -105,10 +130,7 @@ export function createStreamSession(
 ): StreamSession {
   const args = buildArgs(prompt, options, true);
 
-  const proc = spawn('claude', args, {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env },
-  });
+  const proc = spawnClaude(args, options.cwd);
 
   let buffer = '';
   const chunks: ClaudeStreamChunk[] = [];
@@ -174,10 +196,7 @@ export async function chat(
   const startTime = Date.now();
 
   return new Promise<ClaudeResponse>((resolve, reject) => {
-    const proc = spawn('claude', args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env },
-    });
+    const proc = spawnClaude(args, options.cwd);
 
     let stdout = '';
     let stderr = '';
