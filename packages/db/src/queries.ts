@@ -1,7 +1,7 @@
-import { eq, desc, and, like, or } from 'drizzle-orm';
+import { eq, desc, and, like, or, inArray } from 'drizzle-orm';
 import { generateId } from '@vibe/shared';
 import { getDb } from './client';
-import { conversations, messages, tags, conversationTags, settings } from './schema/index';
+import { conversations, messages, tags, conversationTags, settings, files } from './schema/index';
 
 export function createConversation(data: { title: string; model?: string }) {
   const db = getDb();
@@ -232,4 +232,69 @@ export function setSetting(key: string, value: unknown) {
     .values({ key, value })
     .onConflictDoUpdate({ target: settings.key, set: { value } })
     .run();
+}
+
+// ---- FILE QUERIES ----
+
+export function createFile(data: {
+  messageId?: string | null;
+  conversationId?: string | null;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  path: string;
+  type: 'image' | 'pdf' | 'docx' | 'xlsx' | 'csv' | 'code' | 'text' | 'other';
+  metadata?: Record<string, unknown> | null;
+  direction: 'upload' | 'generated';
+}) {
+  const db = getDb();
+  const id = generateId();
+  const now = new Date();
+  db.insert(files)
+    .values({
+      id,
+      messageId: data.messageId ?? null,
+      conversationId: data.conversationId ?? null,
+      name: data.name,
+      originalName: data.originalName,
+      mimeType: data.mimeType,
+      size: data.size,
+      path: data.path,
+      type: data.type,
+      metadata: data.metadata ?? null,
+      direction: data.direction,
+      createdAt: now,
+    })
+    .run();
+  return { id, ...data, createdAt: now };
+}
+
+export function getFile(id: string) {
+  const db = getDb();
+  return db.select().from(files).where(eq(files.id, id)).get();
+}
+
+export function getFilesByMessage(messageId: string) {
+  const db = getDb();
+  return db.select().from(files).where(eq(files.messageId, messageId)).all();
+}
+
+export function getFilesByConversation(conversationId: string) {
+  const db = getDb();
+  return db.select().from(files).where(eq(files.conversationId, conversationId)).all();
+}
+
+export function attachFilesToMessage(fileIds: string[], messageId: string) {
+  if (fileIds.length === 0) return;
+  const db = getDb();
+  db.update(files)
+    .set({ messageId })
+    .where(inArray(files.id, fileIds))
+    .run();
+}
+
+export function deleteFile(id: string) {
+  const db = getDb();
+  db.delete(files).where(eq(files.id, id)).run();
 }

@@ -20,4 +20,10 @@ export {
   getAllSettings,
   getSetting,
   setSetting,
+  createFile,
+  getFile,
+  getFilesByMessage,
+  getFilesByConversation,
+  attachFilesToMessage,
+  deleteFile,
 } from './queries';

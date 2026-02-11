@@ -2,16 +2,32 @@
 
 import { create } from 'zustand';
 
+export interface PendingFile {
+  id: string;
+  name: string;
+  originalName: string;
+  size: number;
+  type: string;
+  mimeType: string;
+  previewUrl?: string;
+}
+
 interface ChatState {
   activeConversationId: string | null;
   isStreaming: boolean;
   streamingContent: string;
   abortController: AbortController | null;
+  pendingFiles: PendingFile[];
+  uploadingCount: number;
   setActiveConversation: (id: string | null) => void;
   startStreaming: (abortController: AbortController) => void;
   appendStreamContent: (content: string) => void;
   stopStreaming: () => void;
   cancelStreaming: () => void;
+  addPendingFile: (file: PendingFile) => void;
+  removePendingFile: (id: string) => void;
+  clearPendingFiles: () => void;
+  setUploadingCount: (count: number) => void;
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
@@ -19,6 +35,8 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   isStreaming: false,
   streamingContent: '',
   abortController: null,
+  pendingFiles: [],
+  uploadingCount: 0,
 
   setActiveConversation: (id) => set({ activeConversationId: id }),
 
@@ -50,4 +68,16 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       abortController: null,
     });
   },
+
+  addPendingFile: (file) =>
+    set((state) => ({ pendingFiles: [...state.pendingFiles, file] })),
+
+  removePendingFile: (id) =>
+    set((state) => ({
+      pendingFiles: state.pendingFiles.filter((f) => f.id !== id),
+    })),
+
+  clearPendingFiles: () => set({ pendingFiles: [] }),
+
+  setUploadingCount: (count) => set({ uploadingCount: count }),
 }));
