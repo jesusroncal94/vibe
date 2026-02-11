@@ -7,15 +7,9 @@ import { SearchDialog } from '@/components/chat/search-dialog';
 import { useUiStore, useHydration } from '@/lib/stores/ui-store';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 
-const sidebarWidths = {
-  focus: 'w-0',
-  minimal: 'w-64',
-  productivity: 'w-80',
-} as const;
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const mounted = useHydration();
-  const { sidebarOpen, layoutMode } = useUiStore();
+  const { sidebarOpen, layoutMode, sidebarWidth } = useUiStore();
   const [searchOpen, setSearchOpen] = useState(false);
 
   const shortcuts = useMemo(
@@ -25,7 +19,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts(shortcuts);
 
   const showSidebar = sidebarOpen && layoutMode !== 'focus';
-  const sidebarWidth = sidebarWidths[layoutMode];
 
   const handleSearchOpen = useCallback(() => {
     setSearchOpen(true);
@@ -48,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen flex-col">
       <Header onSearchOpen={handleSearchOpen} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar isOpen={showSidebar} width={sidebarWidth} />
+        <Sidebar isOpen={showSidebar} widthPx={sidebarWidth} />
         <main className="flex-1 overflow-hidden">{children}</main>
       </div>
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
