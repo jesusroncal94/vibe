@@ -1,3 +1,6 @@
+import { join } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { z } from 'zod';
 import {
   createConversation,
@@ -5,15 +8,68 @@ import {
   getMessages,
   getConversation,
   renameConversation,
+  attachFilesToMessage,
+  getFile,
+  getSetting,
 } from '@vibe/db';
 import { createStreamSession } from '@vibe/claude';
 import type { ClaudeModel } from '@vibe/claude';
+import { formatFileSize } from '@/lib/file-utils';
+
+function getUploadsDir(): string {
+  return process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
+}
+
+/** Sandboxed directory for Claude CLI so it doesn't see the project files. */
+function getSandboxDir(): string {
+  const dir = join(tmpdir(), 'vibe-sandbox');
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+    // already exists
+  }
+  return dir;
+}
+
+const DEFAULT_SYSTEM_PROMPT =
+  'You are a helpful AI assistant. Answer questions clearly and concisely. ' +
+  'You do NOT have access to any project files or codebase. ' +
+  'If the user asks about code, ask them to share the specific code they want help with.';
 
 const streamRequestSchema = z.object({
   conversationId: z.string().nullable(),
   prompt: z.string().min(1),
   model: z.string().optional(),
+  fileIds: z.array(z.string()).optional(),
 });
+
+function buildFileContext(fileRecords: NonNullable<ReturnType<typeof getFile>>[]): string {
+  if (fileRecords.length === 0) return '';
+
+  const uploadsDir = getUploadsDir();
+  const blocks: string[] = [];
+
+  for (const file of fileRecords) {
+    const size = formatFileSize(file.size);
+    const meta = file.metadata as Record<string, unknown> | null;
+    const extractedText = meta?.extractedText as string | undefined;
+    const absolutePath = join(uploadsDir, file.path);
+
+    if (extractedText) {
+      blocks.push(
+        `[Attached file: ${file.originalName} (${file.type}, ${size})]\n---\n${extractedText}\n---`,
+      );
+    } else if (file.type === 'image') {
+      blocks.push(`[Attached image: ${file.originalName} (${size})]`);
+    } else {
+      blocks.push(
+        `[Attached file: ${file.originalName} (${file.type}, ${size})]\nFile saved at: ${absolutePath}\nUse the Read tool to access this file.`,
+      );
+    }
+  }
+
+  return blocks.join('\n\n') + '\n\n';
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -28,7 +84,7 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { prompt, model } = parsed.data;
+  const { prompt, model, fileIds } = parsed.data;
   let { conversationId } = parsed.data;
 
   // Create conversation if new
@@ -44,11 +100,26 @@ export async function POST(request: Request) {
   }
 
   // Save user message
-  createMessage({
+  const userMessage = createMessage({
     conversationId,
     role: 'user',
     content: prompt,
   });
+
+  // Attach pending files to the user message
+  if (fileIds && fileIds.length > 0) {
+    attachFilesToMessage(fileIds, userMessage.id);
+  }
+
+  // Fetch file records for context injection
+  const fileRecords: NonNullable<ReturnType<typeof getFile>>[] = [];
+  if (fileIds && fileIds.length > 0) {
+    for (const fid of fileIds) {
+      const record = getFile(fid);
+      if (record) fileRecords.push(record);
+    }
+  }
+  const fileContext = buildFileContext(fileRecords);
 
   // Build context from conversation history
   const history = getMessages(conversationId);
@@ -58,12 +129,18 @@ export async function POST(request: Request) {
     .join('\n\n');
 
   const fullPrompt = contextMessages
-    ? `Previous conversation:\n${contextMessages}\n\nHuman: ${prompt}`
-    : prompt;
+    ? `Previous conversation:\n${contextMessages}\n\nHuman: ${fileContext}${prompt}`
+    : `${fileContext}${prompt}`;
 
-  // Create stream session
+  // Read user-configured system prompt from settings
+  const userSystemPrompt = getSetting('systemPrompt') as string | undefined;
+  const systemPrompt = userSystemPrompt || DEFAULT_SYSTEM_PROMPT;
+
+  // Create stream session in a sandboxed directory
   const session = createStreamSession(fullPrompt, {
     model: (model as ClaudeModel) ?? undefined,
+    systemPrompt,
+    cwd: getSandboxDir(),
   });
 
   let fullResponse = '';
@@ -82,11 +159,18 @@ export async function POST(request: Request) {
         for await (const chunk of session.stream) {
           if (chunk.type === 'text') {
             fullResponse += chunk.content;
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ type: 'text', content: chunk.content })}\n\n`,
-              ),
-            );
+            // Claude CLI stream-json emits the full response in one event.
+            // Split into small chunks to simulate progressive streaming.
+            const text = chunk.content;
+            const chunkSize = 12;
+            for (let i = 0; i < text.length; i += chunkSize) {
+              const piece = text.slice(i, i + chunkSize);
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: 'text', content: piece })}\n\n`,
+                ),
+              );
+            }
           } else if (chunk.type === 'error') {
             controller.enqueue(
               encoder.encode(
@@ -109,10 +193,19 @@ export async function POST(request: Request) {
           const conv = getConversation(finalConversationId);
           const msgs = getMessages(finalConversationId);
           if (conv && msgs.length <= 2 && conv.title === prompt.slice(0, 100) + (prompt.length > 100 ? '...' : '')) {
+            // Strip markdown syntax from title
+            const cleaned = fullResponse
+              .replace(/^#{1,6}\s+/gm, '')  // headers
+              .replace(/\*\*(.+?)\*\*/g, '$1') // bold
+              .replace(/\*(.+?)\*/g, '$1')   // italic
+              .replace(/`(.+?)`/g, '$1')     // inline code
+              .replace(/\[(.+?)\]\(.+?\)/g, '$1') // links
+              .replace(/\n/g, ' ')
+              .trim();
             const summaryTitle =
-              fullResponse.length > 60
-                ? fullResponse.slice(0, 60).replace(/\n/g, ' ') + '...'
-                : fullResponse.replace(/\n/g, ' ');
+              cleaned.length > 60
+                ? cleaned.slice(0, 60) + '...'
+                : cleaned;
             renameConversation(finalConversationId, summaryTitle);
           }
         }

@@ -9,6 +9,7 @@ import {
   deleteConversation,
   renameConversation,
   createMessage,
+  getFilesByMessage,
 } from '@vibe/db';
 import { chat } from '@vibe/claude';
 
@@ -36,7 +37,17 @@ export const chatRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Conversation not found' });
       }
       const msgs = getMessages(input.id);
-      return { ...conversation, messages: msgs };
+      const messagesWithFiles = msgs.map((msg) => {
+        const files = getFilesByMessage(msg.id).map((f) => ({
+          id: f.id,
+          originalName: f.originalName,
+          size: f.size,
+          type: f.type,
+          mimeType: f.mimeType,
+        }));
+        return { ...msg, files };
+      });
+      return { ...conversation, messages: messagesWithFiles };
     }),
 
   rename: publicProcedure

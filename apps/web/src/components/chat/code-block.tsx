@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 
 interface CodeBlockProps {
   language?: string;
+  filename?: string;
   children: string;
 }
 
-export function CodeBlock({ language, children }: CodeBlockProps) {
+export function CodeBlock({ language, filename, children }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -21,20 +22,22 @@ export function CodeBlock({ language, children }: CodeBlockProps) {
   }, [children]);
 
   const handleDownload = useCallback(() => {
-    const ext = language ?? 'txt';
+    const downloadName = filename ?? `code.${language ?? 'txt'}`;
     const blob = new Blob([children], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `code.${ext}`;
+    a.download = downloadName;
     a.click();
     URL.revokeObjectURL(url);
-  }, [children, language]);
+  }, [children, language, filename]);
+
+  const displayLabel = filename ?? language ?? 'text';
 
   return (
     <div className="group relative my-3 overflow-hidden rounded-lg border bg-zinc-950">
       <div className="flex items-center justify-between border-b bg-zinc-900 px-4 py-2">
-        <span className="text-xs text-zinc-400">{language ?? 'text'}</span>
+        <span className="text-xs text-zinc-400">{displayLabel}</span>
         <div className="flex gap-1">
           <Button
             variant="ghost"
