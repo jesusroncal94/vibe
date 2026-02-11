@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Header } from './header';
 import { Sidebar } from './sidebar';
 import { SearchDialog } from '@/components/chat/search-dialog';
-import { useUiStore } from '@/lib/stores/ui-store';
+import { useUiStore, useUiStoreHydration } from '@/lib/stores/ui-store';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 
 const sidebarWidths = {
@@ -14,6 +14,7 @@ const sidebarWidths = {
 } as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  useUiStoreHydration();
   const { sidebarOpen, layoutMode } = useUiStore();
   const [searchOpen, setSearchOpen] = useState(false);
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -32,6 +33,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'vibe-ui-store',
+      skipHydration: true,
       partialize: (state) => ({
         sidebarOpen: state.sidebarOpen,
         layoutMode: state.layoutMode,
@@ -40,3 +42,19 @@ export const useUiStore = create<UiState>()(
     },
   ),
 );
+
+/**
+ * Hook to rehydrate the persisted store after mount,
+ * preventing SSR/client hydration mismatches.
+ * Call once in a top-level client component (e.g. AppShell).
+ */
+export function useUiStoreHydration() {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    useUiStore.persist.rehydrate();
+    setHydrated(true);
+  }, []);
+
+  return hydrated;
+}
