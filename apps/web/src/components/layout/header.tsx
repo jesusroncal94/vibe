@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Menu, Settings, Layout } from 'lucide-react';
+import { Menu, Settings, Layout, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,7 +18,11 @@ const layoutModes = [
   { id: 'productivity' as const, label: 'Productivity', description: 'Wide sidebar' },
 ];
 
-export function Header() {
+interface HeaderProps {
+  onSearchOpen?: () => void;
+}
+
+export function Header({ onSearchOpen }: HeaderProps) {
   const router = useRouter();
   const { toggleSidebar, layoutMode, setLayoutMode, model, setModel } = useUiStore();
 
@@ -31,6 +35,20 @@ export function Header() {
       <h1 className="text-lg font-semibold">Vibe</h1>
 
       <div className="ml-auto flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 text-xs text-muted-foreground"
+          onClick={onSearchOpen}
+          aria-label="Search"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Search</span>
+          <kbd className="hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline">
+            Ctrl+K
+          </kbd>
+        </Button>
+
         <ModelSelector model={model} onModelChange={setModel} />
 
         <DropdownMenu>

@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useUiStore } from '@/lib/stores/ui-store';
 import { useChatStore } from '@/lib/stores/chat-store';
 
-export function useKeyboardShortcuts() {
+interface KeyboardShortcutOptions {
+  onSearchOpen?: () => void;
+}
+
+export function useKeyboardShortcuts(options?: KeyboardShortcutOptions) {
   const router = useRouter();
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const cancelStreaming = useChatStore((s) => s.cancelStreaming);
@@ -17,6 +21,12 @@ export function useKeyboardShortcuts() {
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
         router.push('/chat');
+      }
+
+      // Ctrl+K — Open search
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        options?.onSearchOpen?.();
       }
 
       // Ctrl+Shift+S — Toggle sidebar
@@ -34,5 +44,5 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [router, toggleSidebar, cancelStreaming, isStreaming]);
+  }, [router, toggleSidebar, cancelStreaming, isStreaming, options]);
 }
