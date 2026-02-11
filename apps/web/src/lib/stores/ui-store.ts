@@ -44,17 +44,18 @@ export const useUiStore = create<UiState>()(
 );
 
 /**
- * Hook to rehydrate the persisted store after mount,
- * preventing SSR/client hydration mismatches.
- * Call once in a top-level client component (e.g. AppShell).
+ * Rehydrate persisted store after mount and return mount status.
+ * Call once in a top-level client component (AppShell).
+ * Components with Radix UI (DropdownMenu, Dialog, etc.) should
+ * only render after mounted=true to avoid React 19 hydration mismatches.
  */
-export function useUiStoreHydration() {
-  const [hydrated, setHydrated] = useState(false);
+export function useHydration() {
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     useUiStore.persist.rehydrate();
-    setHydrated(true);
+    setMounted(true);
   }, []);
 
-  return hydrated;
+  return mounted;
 }

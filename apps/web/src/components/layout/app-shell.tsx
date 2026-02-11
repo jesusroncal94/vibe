@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Header } from './header';
 import { Sidebar } from './sidebar';
 import { SearchDialog } from '@/components/chat/search-dialog';
-import { useUiStore, useUiStoreHydration } from '@/lib/stores/ui-store';
+import { useUiStore, useHydration } from '@/lib/stores/ui-store';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 
 const sidebarWidths = {
@@ -14,7 +14,7 @@ const sidebarWidths = {
 } as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  useUiStoreHydration();
+  const mounted = useHydration();
   const { sidebarOpen, layoutMode } = useUiStore();
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -30,6 +30,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const handleSearchOpen = useCallback(() => {
     setSearchOpen(true);
   }, []);
+
+  // Render a minimal shell during SSR / before mount to avoid
+  // React 19 hydration mismatches from Radix UI components.
+  if (!mounted) {
+    return (
+      <div className="flex h-screen flex-col">
+        <header className="flex h-14 items-center border-b px-4" />
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-hidden">{children}</main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col">
