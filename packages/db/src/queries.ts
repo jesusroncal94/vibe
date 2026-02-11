@@ -69,11 +69,22 @@ export function getConversationsWithPreview() {
       .limit(1)
       .get();
 
+    const tagRows = db
+      .select({ tagId: conversationTags.tagId })
+      .from(conversationTags)
+      .where(eq(conversationTags.conversationId, conv.id))
+      .all();
+
+    const convTags = tagRows.length > 0
+      ? db.select().from(tags).where(or(...tagRows.map((r) => eq(tags.id, r.tagId)))).all()
+      : [];
+
     return {
       ...conv,
       lastMessage: lastMessage
         ? { content: lastMessage.content, createdAt: lastMessage.createdAt, role: lastMessage.role }
         : null,
+      tags: convTags,
     };
   });
 }
