@@ -54,6 +54,7 @@ const streamRequestSchema = z.object({
   model: z.string().optional(),
   fileIds: z.array(z.string()).optional(),
   internetAccess: z.boolean().optional().default(true),
+  disabledTools: z.array(z.string()).optional().default([]),
 });
 
 function buildFileContext(fileRecords: NonNullable<ReturnType<typeof getFile>>[]): string {
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { prompt, model, fileIds, internetAccess } = parsed.data;
+  const { prompt, model, fileIds, internetAccess, disabledTools } = parsed.data;
   let { conversationId } = parsed.data;
 
   // Create conversation if new
@@ -145,14 +146,15 @@ export async function POST(request: Request) {
     ? `Previous conversation:\n${contextMessages}\n\nHuman: ${fileContext}${prompt}`
     : `${fileContext}${prompt}`;
 
-  // Read user-configured system prompt from settings
+  // Read user-configured settings
   const userSystemPrompt = getSetting('systemPrompt') as string | undefined;
   const systemPrompt = userSystemPrompt || DEFAULT_SYSTEM_PROMPT;
+  const maxTurns = (getSetting('maxTurns') as number | undefined) || undefined;
 
-  // Filter out web tools when internet access is disabled
-  const allowedTools = internetAccess
-    ? ALLOWED_TOOLS
-    : ALLOWED_TOOLS.filter((t) => t !== 'WebSearch' && t !== 'WebFetch');
+  // Filter out disabled tools and web tools when internet access is off
+  const webTools = internetAccess ? [] : ['WebSearch', 'WebFetch'];
+  const excluded = new Set([...webTools, ...disabledTools]);
+  const allowedTools = ALLOWED_TOOLS.filter((t) => !excluded.has(t));
 
   // Create stream session in a sandboxed directory
   const session = createStreamSession(fullPrompt, {
@@ -160,6 +162,7 @@ export async function POST(request: Request) {
     systemPrompt,
     cwd: getSandboxDir(),
     allowedTools,
+    maxTurns,
   });
 
   let fullResponse = '';

@@ -24,6 +24,7 @@ export function ChatView({ conversationId }: ChatViewProps) {
     useChatStore();
   const model = useUiStore((s) => s.model);
   const internetAccess = useUiStore((s) => s.internetAccess);
+  const disabledTools = useUiStore((s) => s.disabledTools);
   const { uploadFiles, isUploading } = useFileUpload(conversationId);
 
   const conversationQuery = useQuery(
@@ -45,16 +46,16 @@ export function ChatView({ conversationId }: ChatViewProps) {
   const handleSend = useCallback(
     (prompt: string, fileIds: string[]) => {
       clearPendingFiles();
-      void sendMessage(conversationId, prompt, model, fileIds, internetAccess);
+      void sendMessage(conversationId, prompt, model, fileIds, internetAccess, disabledTools);
     },
-    [conversationId, model, internetAccess, sendMessage, clearPendingFiles],
+    [conversationId, model, internetAccess, disabledTools, sendMessage, clearPendingFiles],
   );
 
   const handleSuggestionClick = useCallback(
     (prompt: string) => {
-      void sendMessage(null, prompt, model, undefined, internetAccess);
+      void sendMessage(null, prompt, model, undefined, internetAccess, disabledTools);
     },
-    [model, internetAccess, sendMessage],
+    [model, internetAccess, disabledTools, sendMessage],
   );
 
   const { getRootProps, isDragActive } = useDropzone({

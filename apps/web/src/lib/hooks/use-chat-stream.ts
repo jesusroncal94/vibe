@@ -19,7 +19,7 @@ export function useChatStream() {
   const { startStreaming, appendStreamContent, stopStreaming } = useChatStore();
 
   const sendMessage = useCallback(
-    async (conversationId: string | null, prompt: string, model?: string, fileIds?: string[], internetAccess?: boolean) => {
+    async (conversationId: string | null, prompt: string, model?: string, fileIds?: string[], internetAccess?: boolean, disabledTools?: string[]) => {
       const abortController = new AbortController();
       startStreaming(abortController);
 
@@ -27,7 +27,7 @@ export function useChatStream() {
         const response = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId, prompt, model, fileIds, internetAccess }),
+          body: JSON.stringify({ conversationId, prompt, model, fileIds, internetAccess, disabledTools }),
           signal: abortController.signal,
         });
 

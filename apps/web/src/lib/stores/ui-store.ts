@@ -5,13 +5,16 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 type LayoutMode = 'focus' | 'minimal' | 'productivity';
+type FontSize = 'small' | 'normal' | 'large';
 
 interface UiState {
   sidebarOpen: boolean;
   layoutMode: LayoutMode;
   sidebarWidth: number;
+  fontSize: FontSize;
   model: string;
   internetAccess: boolean;
+  disabledTools: string[];
   filePanelOpen: boolean;
   filePanelFileId: string | null;
   filePanelWidth: number;
@@ -19,8 +22,10 @@ interface UiState {
   setSidebarOpen: (open: boolean) => void;
   setLayoutMode: (mode: LayoutMode) => void;
   setSidebarWidth: (width: number) => void;
+  setFontSize: (size: FontSize) => void;
   setModel: (model: string) => void;
   setInternetAccess: (enabled: boolean) => void;
+  setToolEnabled: (tool: string, enabled: boolean) => void;
   openFilePanel: (fileId: string) => void;
   closeFilePanel: () => void;
   setFilePanelWidth: (width: number) => void;
@@ -38,8 +43,10 @@ export const useUiStore = create<UiState>()(
       sidebarOpen: true,
       layoutMode: 'minimal',
       sidebarWidth: DEFAULT_WIDTHS.minimal,
+      fontSize: 'normal' as FontSize,
       model: 'claude-sonnet-4-5',
       internetAccess: true,
+      disabledTools: [] as string[],
       filePanelOpen: false,
       filePanelFileId: null,
       filePanelWidth: 360,
@@ -52,8 +59,15 @@ export const useUiStore = create<UiState>()(
           sidebarWidth: DEFAULT_WIDTHS[mode],
         }),
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
+      setFontSize: (size) => set({ fontSize: size }),
       setModel: (model) => set({ model }),
       setInternetAccess: (enabled) => set({ internetAccess: enabled }),
+      setToolEnabled: (tool, enabled) =>
+        set((state) => ({
+          disabledTools: enabled
+            ? state.disabledTools.filter((t) => t !== tool)
+            : [...state.disabledTools, tool],
+        })),
       openFilePanel: (fileId) => set({ filePanelOpen: true, filePanelFileId: fileId }),
       closeFilePanel: () => set({ filePanelOpen: false, filePanelFileId: null }),
       setFilePanelWidth: (width) => set({ filePanelWidth: width }),
@@ -65,8 +79,10 @@ export const useUiStore = create<UiState>()(
         sidebarOpen: state.sidebarOpen,
         layoutMode: state.layoutMode,
         sidebarWidth: state.sidebarWidth,
+        fontSize: state.fontSize,
         model: state.model,
         internetAccess: state.internetAccess,
+        disabledTools: state.disabledTools,
         filePanelWidth: state.filePanelWidth,
       }),
     },

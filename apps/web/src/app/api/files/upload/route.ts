@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createFile } from '@vibe/db';
+import { createFile, getSetting } from '@vibe/db';
 import {
   classifyFileType,
   sanitizeFileName,
@@ -86,14 +86,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const maxUploadSizeMB = (getSetting('maxUploadSizeMB') as number | undefined) ?? 10;
+  const maxSizeBytes = maxUploadSizeMB * 1024 * 1024;
+
   const results = [];
 
   for (const entry of fileEntries) {
     if (!(entry instanceof File)) continue;
 
-    if (entry.size > FILE_LIMITS.maxSize) {
+    if (entry.size > maxSizeBytes) {
       return Response.json(
-        { error: `File "${entry.name}" exceeds ${FILE_LIMITS.maxSize / (1024 * 1024)}MB limit` },
+        { error: `File "${entry.name}" exceeds ${maxUploadSizeMB}MB limit` },
         { status: 400 },
       );
     }

@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { useTheme } from 'next-themes';
-import { ArrowLeft, Palette, Bot, Info } from 'lucide-react';
+import { ArrowLeft, Palette, Bot, Info, HardDrive } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -63,7 +63,13 @@ function SettingsRow({
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { layoutMode, setLayoutMode, model, setModel, internetAccess, setInternetAccess } = useUiStore();
+  const {
+    layoutMode, setLayoutMode,
+    fontSize, setFontSize,
+    model, setModel,
+    internetAccess, setInternetAccess,
+    disabledTools, setToolEnabled,
+  } = useUiStore();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -124,6 +130,19 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
             </SettingsRow>
+
+            <SettingsRow label="Font size" description="Text size in the interface">
+              <Select value={fontSize} onValueChange={(v) => setFontSize(v as 'small' | 'normal' | 'large')}>
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">Small</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="large">Large</SelectItem>
+                </SelectContent>
+              </Select>
+            </SettingsRow>
           </SettingsSection>
 
           <Separator />
@@ -150,6 +169,52 @@ export default function SettingsPage() {
             </SettingsRow>
 
             <div className="space-y-2">
+              <Label>Allowed tools</Label>
+              <p className="text-xs text-muted-foreground">
+                Tools Claude can use during conversations
+              </p>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {[
+                  { id: 'Bash', label: 'Bash', desc: 'Run shell commands' },
+                  { id: 'Read', label: 'Read', desc: 'Read files' },
+                  { id: 'Write', label: 'Write', desc: 'Create files' },
+                  { id: 'Edit', label: 'Edit', desc: 'Edit files' },
+                  { id: 'Glob', label: 'Glob', desc: 'Find files' },
+                  { id: 'Grep', label: 'Grep', desc: 'Search content' },
+                ].map((tool) => (
+                  <label key={tool.id} className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={!disabledTools.includes(tool.id)}
+                      onCheckedChange={(checked) => setToolEnabled(tool.id, checked)}
+                    />
+                    <div>
+                      <span className="font-medium">{tool.label}</span>
+                      <span className="ml-1 text-xs text-muted-foreground">{tool.desc}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <SettingsRow label="Max turns" description="Maximum agentic turns per response (0 = unlimited)">
+              <Select
+                value={String((settingsData['maxTurns'] as number) ?? 0)}
+                onValueChange={(v) => updateSetting('maxTurns', Number(v))}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Unlimited</SelectItem>
+                  <SelectItem value="3">3 turns</SelectItem>
+                  <SelectItem value="5">5 turns</SelectItem>
+                  <SelectItem value="10">10 turns</SelectItem>
+                  <SelectItem value="25">25 turns</SelectItem>
+                </SelectContent>
+              </Select>
+            </SettingsRow>
+
+            <div className="space-y-2">
               <Label>System prompt</Label>
               <p className="text-xs text-muted-foreground">
                 Additional instructions prepended to every conversation
@@ -162,6 +227,27 @@ export default function SettingsPage() {
                 className="resize-none"
               />
             </div>
+          </SettingsSection>
+
+          <Separator />
+
+          <SettingsSection icon={HardDrive} title="Files">
+            <SettingsRow label="Max upload size" description="Maximum file size in megabytes">
+              <Select
+                value={String((settingsData['maxUploadSizeMB'] as number) ?? 10)}
+                onValueChange={(v) => updateSetting('maxUploadSizeMB', Number(v))}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 MB</SelectItem>
+                  <SelectItem value="10">10 MB</SelectItem>
+                  <SelectItem value="25">25 MB</SelectItem>
+                  <SelectItem value="50">50 MB</SelectItem>
+                </SelectContent>
+              </Select>
+            </SettingsRow>
           </SettingsSection>
 
           <Separator />

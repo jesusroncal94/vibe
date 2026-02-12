@@ -10,7 +10,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const mounted = useHydration();
-  const { sidebarOpen, layoutMode, sidebarWidth } = useUiStore();
+  const { sidebarOpen, layoutMode, sidebarWidth, fontSize } = useUiStore();
   const [searchOpen, setSearchOpen] = useState(false);
 
   const shortcuts = useMemo(
@@ -38,8 +38,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const fontSizeClass = fontSize === 'small' ? 'text-sm' : fontSize === 'large' ? 'text-lg' : 'text-base';
+
   return (
-    <div className="flex h-screen flex-col">
+    <div className={`flex h-screen flex-col ${fontSizeClass}`}>
       <Header onSearchOpen={handleSearchOpen} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar isOpen={showSidebar} widthPx={sidebarWidth} />
