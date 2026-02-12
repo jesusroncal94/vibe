@@ -23,6 +23,7 @@ export function ChatView({ conversationId }: ChatViewProps) {
   const { isStreaming, streamingContent, cancelStreaming, pendingFiles, removePendingFile, clearPendingFiles } =
     useChatStore();
   const model = useUiStore((s) => s.model);
+  const internetAccess = useUiStore((s) => s.internetAccess);
   const { uploadFiles, isUploading } = useFileUpload(conversationId);
 
   const conversationQuery = useQuery(
@@ -44,16 +45,16 @@ export function ChatView({ conversationId }: ChatViewProps) {
   const handleSend = useCallback(
     (prompt: string, fileIds: string[]) => {
       clearPendingFiles();
-      void sendMessage(conversationId, prompt, model, fileIds);
+      void sendMessage(conversationId, prompt, model, fileIds, internetAccess);
     },
-    [conversationId, model, sendMessage, clearPendingFiles],
+    [conversationId, model, internetAccess, sendMessage, clearPendingFiles],
   );
 
   const handleSuggestionClick = useCallback(
     (prompt: string) => {
-      void sendMessage(null, prompt, model);
+      void sendMessage(null, prompt, model, undefined, internetAccess);
     },
-    [model, sendMessage],
+    [model, internetAccess, sendMessage],
   );
 
   const { getRootProps, isDragActive } = useDropzone({
@@ -83,6 +84,7 @@ export function ChatView({ conversationId }: ChatViewProps) {
           messages={messages}
           streamingContent={streamingContent}
           isStreaming={isStreaming}
+          conversationId={conversationId ?? undefined}
         />
       )}
       <InputBar

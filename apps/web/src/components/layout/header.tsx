@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Menu, Settings, Layout, Search } from 'lucide-react';
+import { Menu, Settings, Layout, Search, FolderOpen, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -24,7 +24,7 @@ interface HeaderProps {
 
 export function Header({ onSearchOpen }: HeaderProps) {
   const router = useRouter();
-  const { toggleSidebar, layoutMode, setLayoutMode, model, setModel } = useUiStore();
+  const { toggleSidebar, layoutMode, setLayoutMode, model, setModel, internetAccess, setInternetAccess } = useUiStore();
 
   return (
     <header className="flex h-14 items-center border-b px-4 gap-4">
@@ -51,6 +51,16 @@ export function Header({ onSearchOpen }: HeaderProps) {
 
         <ModelSelector model={model} onModelChange={setModel} />
 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setInternetAccess(!internetAccess)}
+          aria-label={internetAccess ? 'Internet access enabled' : 'Internet access disabled'}
+          title={internetAccess ? 'Internet access enabled' : 'Internet access disabled'}
+        >
+          <Globe className={`h-4 w-4 ${internetAccess ? 'text-primary' : 'text-muted-foreground'}`} />
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Layout mode">
@@ -72,6 +82,15 @@ export function Header({ onSearchOpen }: HeaderProps) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => router.push('/files')}
+          aria-label="Files"
+        >
+          <FolderOpen className="h-4 w-4" />
+        </Button>
 
         <Button
           variant="ghost"

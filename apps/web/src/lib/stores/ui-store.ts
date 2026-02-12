@@ -11,11 +11,19 @@ interface UiState {
   layoutMode: LayoutMode;
   sidebarWidth: number;
   model: string;
+  internetAccess: boolean;
+  filePanelOpen: boolean;
+  filePanelFileId: string | null;
+  filePanelWidth: number;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setLayoutMode: (mode: LayoutMode) => void;
   setSidebarWidth: (width: number) => void;
   setModel: (model: string) => void;
+  setInternetAccess: (enabled: boolean) => void;
+  openFilePanel: (fileId: string) => void;
+  closeFilePanel: () => void;
+  setFilePanelWidth: (width: number) => void;
 }
 
 const DEFAULT_WIDTHS: Record<LayoutMode, number> = {
@@ -31,6 +39,10 @@ export const useUiStore = create<UiState>()(
       layoutMode: 'minimal',
       sidebarWidth: DEFAULT_WIDTHS.minimal,
       model: 'claude-sonnet-4-5',
+      internetAccess: true,
+      filePanelOpen: false,
+      filePanelFileId: null,
+      filePanelWidth: 360,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setLayoutMode: (mode) =>
@@ -41,6 +53,10 @@ export const useUiStore = create<UiState>()(
         }),
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
       setModel: (model) => set({ model }),
+      setInternetAccess: (enabled) => set({ internetAccess: enabled }),
+      openFilePanel: (fileId) => set({ filePanelOpen: true, filePanelFileId: fileId }),
+      closeFilePanel: () => set({ filePanelOpen: false, filePanelFileId: null }),
+      setFilePanelWidth: (width) => set({ filePanelWidth: width }),
     }),
     {
       name: 'vibe-ui-store',
@@ -50,6 +66,8 @@ export const useUiStore = create<UiState>()(
         layoutMode: state.layoutMode,
         sidebarWidth: state.sidebarWidth,
         model: state.model,
+        internetAccess: state.internetAccess,
+        filePanelWidth: state.filePanelWidth,
       }),
     },
   ),

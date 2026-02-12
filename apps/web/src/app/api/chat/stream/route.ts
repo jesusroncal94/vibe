@@ -33,14 +33,27 @@ function getSandboxDir(): string {
 
 const DEFAULT_SYSTEM_PROMPT =
   'You are a helpful AI assistant. Answer questions clearly and concisely. ' +
-  'You do NOT have access to any project files or codebase. ' +
+  'You have access to web search to find current information when needed. ' +
   'If the user asks about code, ask them to share the specific code they want help with.';
+
+/** Tools to allow in the Claude CLI session. */
+const ALLOWED_TOOLS = [
+  'Bash',
+  'Read',
+  'Write',
+  'Edit',
+  'Glob',
+  'Grep',
+  'WebSearch',
+  'WebFetch',
+];
 
 const streamRequestSchema = z.object({
   conversationId: z.string().nullable(),
   prompt: z.string().min(1),
   model: z.string().optional(),
   fileIds: z.array(z.string()).optional(),
+  internetAccess: z.boolean().optional().default(true),
 });
 
 function buildFileContext(fileRecords: NonNullable<ReturnType<typeof getFile>>[]): string {
@@ -84,7 +97,7 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { prompt, model, fileIds } = parsed.data;
+  const { prompt, model, fileIds, internetAccess } = parsed.data;
   let { conversationId } = parsed.data;
 
   // Create conversation if new
@@ -136,11 +149,17 @@ export async function POST(request: Request) {
   const userSystemPrompt = getSetting('systemPrompt') as string | undefined;
   const systemPrompt = userSystemPrompt || DEFAULT_SYSTEM_PROMPT;
 
+  // Filter out web tools when internet access is disabled
+  const allowedTools = internetAccess
+    ? ALLOWED_TOOLS
+    : ALLOWED_TOOLS.filter((t) => t !== 'WebSearch' && t !== 'WebFetch');
+
   // Create stream session in a sandboxed directory
   const session = createStreamSession(fullPrompt, {
     model: (model as ClaudeModel) ?? undefined,
     systemPrompt,
     cwd: getSandboxDir(),
+    allowedTools,
   });
 
   let fullResponse = '';

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { useUiStore } from '@/lib/stores/ui-store';
 import { useTRPC } from '@/lib/trpc/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -62,7 +63,7 @@ function SettingsRow({
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { layoutMode, setLayoutMode, model, setModel } = useUiStore();
+  const { layoutMode, setLayoutMode, model, setModel, internetAccess, setInternetAccess } = useUiStore();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -139,6 +140,13 @@ export default function SettingsPage() {
                   <SelectItem value="claude-haiku-4-5">Haiku 4.5</SelectItem>
                 </SelectContent>
               </Select>
+            </SettingsRow>
+
+            <SettingsRow label="Internet access" description="Allow Claude to search the web">
+              <Switch
+                checked={internetAccess}
+                onCheckedChange={setInternetAccess}
+              />
             </SettingsRow>
 
             <div className="space-y-2">
