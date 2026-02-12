@@ -1,4 +1,4 @@
-import { eq, desc, and, like, or, inArray, count, sum, sql } from 'drizzle-orm';
+import { eq, desc, and, like, or, inArray, count, sum } from 'drizzle-orm';
 import { generateId } from '@vibe/shared';
 import { getDb } from './client';
 import { conversations, messages, tags, conversationTags, settings, files } from './schema/index';
