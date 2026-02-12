@@ -1,8 +1,10 @@
 'use client';
 
-import { FileText, Image, FileSpreadsheet, FileCode, File, Check, Download, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FileText, Image, FileSpreadsheet, FileCode, File, Check, Download, Trash2, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useChatStore } from '@/lib/stores/chat-store';
 
 interface FileRow {
   id: string;
@@ -57,6 +59,21 @@ function fileIcon(type: string) {
 }
 
 export function FileListView({ files, selectedIds, onSelect, onClick, onDelete }: FileListViewProps) {
+  const router = useRouter();
+  const addPendingFile = useChatStore((s) => s.addPendingFile);
+
+  const handleUseInChat = (file: FileRow) => {
+    addPendingFile({
+      id: file.id,
+      name: file.originalName,
+      originalName: file.originalName,
+      size: file.size,
+      type: file.type,
+      mimeType: file.mimeType,
+    });
+    router.push('/chat');
+  };
+
   return (
     <div className="overflow-auto rounded-lg border">
       <table className="w-full text-sm">
@@ -112,6 +129,15 @@ export function FileListView({ files, selectedIds, onSelect, onClick, onDelete }
                 <td className="px-3 py-2 text-muted-foreground">{formatDate(file.createdAt)}</td>
                 <td className="px-3 py-2">
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleUseInChat(file)}
+                      title="Use in chat"
+                    >
+                      <MessageSquarePlus className="h-3 w-3" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
                       <a href={`/api/files/${file.id}`} download={file.originalName}>
                         <Download className="h-3 w-3" />

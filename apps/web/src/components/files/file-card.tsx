@@ -1,12 +1,15 @@
 'use client';
 
-import { FileText, Image, FileSpreadsheet, FileCode, File, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FileText, Image, FileSpreadsheet, FileCode, File, Check, MessageSquarePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useChatStore } from '@/lib/stores/chat-store';
 
 interface FileCardProps {
   id: string;
   originalName: string;
   type: string;
+  mimeType: string;
   size: number;
   createdAt: Date;
   selected: boolean;
@@ -47,9 +50,17 @@ function FileTypeIcon({ type }: { type: string }) {
   }
 }
 
-export function FileCard({ id, originalName, type, size, createdAt, selected, onSelect, onClick }: FileCardProps) {
+export function FileCard({ id, originalName, type, mimeType, size, createdAt, selected, onSelect, onClick }: FileCardProps) {
+  const router = useRouter();
+  const addPendingFile = useChatStore((s) => s.addPendingFile);
   const isImage = type === 'image';
   const thumbnailUrl = isImage ? `/api/files/${id}/thumbnail` : undefined;
+
+  const handleUseInChat = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addPendingFile({ id, name: originalName, originalName, size, type, mimeType });
+    router.push('/chat');
+  };
 
   return (
     <div
@@ -72,6 +83,15 @@ export function FileCard({ id, originalName, type, size, createdAt, selected, on
         }}
       >
         {selected && <Check className="h-3 w-3" />}
+      </button>
+
+      <button
+        type="button"
+        className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded bg-background/80 border opacity-0 transition-opacity group-hover:opacity-100 hover:bg-primary hover:text-primary-foreground"
+        onClick={handleUseInChat}
+        title="Use in chat"
+      >
+        <MessageSquarePlus className="h-3 w-3" />
       </button>
 
       <button

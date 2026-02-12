@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { MessageSquarePlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -7,9 +9,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { PdfPreviewLazy } from './pdf-preview-lazy';
 import { XlsxPreview } from './xlsx-preview';
 import { DocxPreview } from './docx-preview';
+import { useChatStore } from '@/lib/stores/chat-store';
 
 interface FileMetadata {
   extractedText?: string;
@@ -88,14 +92,43 @@ function PreviewContent({ file }: { file: FileData }) {
 }
 
 export function FilePreviewDialog({ file, open, onOpenChange }: FilePreviewDialogProps) {
+  const router = useRouter();
+  const addPendingFile = useChatStore((s) => s.addPendingFile);
+
   if (!file) return null;
+
+  const handleUseInChat = () => {
+    addPendingFile({
+      id: file.id,
+      name: file.originalName,
+      originalName: file.originalName,
+      size: file.size,
+      type: file.type,
+      mimeType: file.mimeType,
+    });
+    onOpenChange(false);
+    router.push('/chat');
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
         <DialogHeader>
-          <DialogTitle className="truncate">{file.originalName}</DialogTitle>
-          <DialogDescription>Preview</DialogDescription>
+          <div className="flex items-center justify-between gap-4 pr-8">
+            <div className="min-w-0">
+              <DialogTitle className="truncate">{file.originalName}</DialogTitle>
+              <DialogDescription>Preview</DialogDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 gap-1.5"
+              onClick={handleUseInChat}
+            >
+              <MessageSquarePlus className="h-3.5 w-3.5" />
+              Use in chat
+            </Button>
+          </div>
         </DialogHeader>
         <PreviewContent file={file} />
       </DialogContent>

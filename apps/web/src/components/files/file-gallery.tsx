@@ -157,6 +157,7 @@ export function FileGallery() {
               id={file.id}
               originalName={file.originalName}
               type={file.type}
+              mimeType={file.mimeType}
               size={file.size}
               createdAt={file.createdAt}
               selected={selectedIds.has(file.id)}
