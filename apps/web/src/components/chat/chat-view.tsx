@@ -58,6 +58,24 @@ export function ChatView({ conversationId }: ChatViewProps) {
     [model, internetAccess, disabledTools, sendMessage],
   );
 
+  const addPendingFile = useChatStore((s) => s.addPendingFile);
+
+  const handleVibeFileDrop = useCallback(
+    (e: React.DragEvent) => {
+      const vibeData = e.dataTransfer.getData('application/x-vibe-file');
+      if (!vibeData) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        const file = JSON.parse(vibeData) as { id: string; name: string; originalName: string; size: number; type: string; mimeType: string };
+        addPendingFile(file);
+      } catch {
+        // ignore malformed data
+      }
+    },
+    [addPendingFile],
+  );
+
   const { getRootProps, isDragActive } = useDropzone({
     onDrop: handleFilesSelected,
     noClick: true,
@@ -67,7 +85,25 @@ export function ChatView({ conversationId }: ChatViewProps) {
   const showEmptyState = !conversationId && messages.length === 0 && !isStreaming;
 
   return (
-    <div {...getRootProps()} className="relative flex h-full flex-col">
+    <div
+      {...getRootProps()}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('application/x-vibe-file')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        } else {
+          getRootProps().onDragOver?.(e);
+        }
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer.types.includes('application/x-vibe-file')) {
+          handleVibeFileDrop(e);
+        } else {
+          getRootProps().onDrop?.(e);
+        }
+      }}
+      className="relative flex h-full flex-col"
+    >
       {isDragActive && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary p-12">

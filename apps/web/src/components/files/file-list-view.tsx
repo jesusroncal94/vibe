@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { FileText, Image, FileSpreadsheet, FileCode, File, Check, Download, Trash2, MessageSquarePlus } from 'lucide-react';
+import { FileText, Image, FileSpreadsheet, FileCode, FileArchive, File, Check, Download, Trash2, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/lib/stores/chat-store';
@@ -49,6 +49,8 @@ function fileIcon(type: string) {
       return <FileSpreadsheet className={cn(cls, 'text-green-400')} />;
     case 'code':
       return <FileCode className={cn(cls, 'text-yellow-400')} />;
+    case 'zip':
+      return <FileArchive className={cn(cls, 'text-purple-400')} />;
     case 'text':
     case 'pdf':
     case 'docx':
@@ -94,8 +96,21 @@ export function FileListView({ files, selectedIds, onSelect, onClick, onDelete }
             return (
               <tr
                 key={file.id}
+                draggable
+                onDragStart={(e) => {
+                  const payload = JSON.stringify({
+                    id: file.id,
+                    name: file.originalName,
+                    originalName: file.originalName,
+                    size: file.size,
+                    type: file.type,
+                    mimeType: file.mimeType,
+                  });
+                  e.dataTransfer.setData('application/x-vibe-file', payload);
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
                 className={cn(
-                  'border-b transition-colors hover:bg-muted/30',
+                  'border-b transition-colors hover:bg-muted/30 cursor-grab active:cursor-grabbing',
                   selected && 'bg-primary/5',
                 )}
               >

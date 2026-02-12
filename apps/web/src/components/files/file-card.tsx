@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { FileText, Image, FileSpreadsheet, FileCode, File, Check, MessageSquarePlus } from 'lucide-react';
+import { FileText, Image, FileSpreadsheet, FileCode, FileArchive, File, Check, MessageSquarePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/lib/stores/chat-store';
 
@@ -41,6 +41,8 @@ function FileTypeIcon({ type }: { type: string }) {
       return <FileSpreadsheet className={cn(className, 'text-green-400')} />;
     case 'code':
       return <FileCode className={cn(className, 'text-yellow-400')} />;
+    case 'zip':
+      return <FileArchive className={cn(className, 'text-purple-400')} />;
     case 'text':
     case 'pdf':
     case 'docx':
@@ -62,10 +64,18 @@ export function FileCard({ id, originalName, type, mimeType, size, createdAt, se
     router.push('/chat');
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    const payload = JSON.stringify({ id, name: originalName, originalName, size, type, mimeType });
+    e.dataTransfer.setData('application/x-vibe-file', payload);
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-lg border transition-colors hover:border-primary/50',
+        'group relative flex flex-col overflow-hidden rounded-lg border transition-colors hover:border-primary/50 cursor-grab active:cursor-grabbing',
         selected && 'border-primary ring-1 ring-primary',
       )}
     >

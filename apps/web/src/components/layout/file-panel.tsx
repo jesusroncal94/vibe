@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { FileDetails } from '@/components/files/file-details';
@@ -140,8 +141,24 @@ export function FilePanel() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="truncate text-sm font-semibold">
+      <div
+        className="flex items-center justify-between border-b px-4 py-3"
+        draggable={!!file}
+        onDragStart={(e) => {
+          if (!file) return;
+          const payload = JSON.stringify({
+            id: file.id,
+            name: file.originalName,
+            originalName: file.originalName,
+            size: file.size,
+            type: file.type,
+            mimeType: file.mimeType,
+          });
+          e.dataTransfer.setData('application/x-vibe-file', payload);
+          e.dataTransfer.effectAllowed = 'copy';
+        }}
+      >
+        <h2 className={cn('truncate text-sm font-semibold', file && 'cursor-grab active:cursor-grabbing')}>
           {file?.originalName ?? 'File Details'}
         </h2>
         <div className="flex items-center gap-1">
