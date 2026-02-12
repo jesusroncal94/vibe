@@ -98,6 +98,60 @@ export async function extractXlsxData(
   }
 }
 
+const TEXT_EXTENSIONS = new Set([
+  '.txt', '.md', '.csv', '.log', '.json', '.xml', '.yaml', '.yml',
+  '.ts', '.tsx', '.js', '.jsx', '.py', '.rb', '.go', '.rs', '.java',
+  '.c', '.cpp', '.h', '.hpp', '.cs', '.html', '.css', '.sql', '.sh',
+  '.toml', '.ini', '.env', '.graphql',
+]);
+
+export async function extractZipContents(
+  filePath: string,
+): Promise<{
+  entries: Array<{ name: string; size: number; isDir: boolean }>;
+  extractedText: string;
+} | null> {
+  try {
+    const JSZip = (await import('jszip')).default;
+    const buffer = await readFile(filePath);
+    const zip = await JSZip.loadAsync(buffer);
+
+    const entries: Array<{ name: string; size: number; isDir: boolean }> = [];
+    const textParts: string[] = [];
+    let totalTextSize = 0;
+    const maxTextSize = 100 * 1024; // 100KB total extracted text
+
+    for (const [name, entry] of Object.entries(zip.files)) {
+      if (entry.dir) {
+        entries.push({ name, size: 0, isDir: true });
+        continue;
+      }
+
+      const ext = '.' + name.split('.').pop()?.toLowerCase();
+      const isText = TEXT_EXTENSIONS.has(ext);
+
+      if (isText && totalTextSize < maxTextSize) {
+        const content = await entry.async('string');
+        entries.push({ name, size: Buffer.byteLength(content), isDir: false });
+        const truncated = content.slice(0, maxTextSize - totalTextSize);
+        textParts.push(`--- ${name} ---\n${truncated}`);
+        totalTextSize += truncated.length;
+      } else {
+        const buf = await entry.async('nodebuffer');
+        entries.push({ name, size: buf.length, isDir: false });
+      }
+    }
+
+    return {
+      entries,
+      extractedText: textParts.join('\n\n'),
+    };
+  } catch (err) {
+    logger.error({ err, filePath }, 'Failed to extract ZIP contents');
+    return null;
+  }
+}
+
 export async function generateThumbnail(
   filePath: string,
   outputPath: string,

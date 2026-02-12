@@ -244,7 +244,7 @@ export function createFile(data: {
   mimeType: string;
   size: number;
   path: string;
-  type: 'image' | 'pdf' | 'docx' | 'xlsx' | 'csv' | 'code' | 'text' | 'other';
+  type: 'image' | 'pdf' | 'docx' | 'xlsx' | 'csv' | 'code' | 'text' | 'zip' | 'other';
   metadata?: Record<string, unknown> | null;
   direction: 'upload' | 'generated';
 }) {
@@ -319,7 +319,7 @@ export function getFilesWithPagination(opts: {
     conditions.push(like(files.originalName, `%${opts.search}%`));
   }
   if (opts.type) {
-    conditions.push(eq(files.type, opts.type as 'image' | 'pdf' | 'docx' | 'xlsx' | 'csv' | 'code' | 'text' | 'other'));
+    conditions.push(eq(files.type, opts.type as 'image' | 'pdf' | 'docx' | 'xlsx' | 'csv' | 'code' | 'text' | 'zip' | 'other'));
   }
   if (opts.direction) {
     conditions.push(eq(files.direction, opts.direction as 'upload' | 'generated'));

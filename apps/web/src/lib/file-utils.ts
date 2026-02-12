@@ -32,9 +32,11 @@ export function classifyFileType(mimeType: string, fileName: string): FileType {
   if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
   if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') return 'xlsx';
   if (mimeType === 'text/csv') return 'csv';
+  if (mimeType === 'application/zip' || mimeType === 'application/x-zip-compressed') return 'zip';
 
   const ext = '.' + fileName.split('.').pop()?.toLowerCase();
   if (ext === '.csv') return 'csv';
+  if (ext === '.zip') return 'zip';
   if (CODE_EXTENSIONS.has(ext)) return 'code';
   if (mimeType.startsWith('text/') || mimeType === 'application/json') return 'text';
 

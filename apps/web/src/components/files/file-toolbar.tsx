@@ -63,6 +63,7 @@ export function FileToolbar({
           <SelectItem value="csv">CSV</SelectItem>
           <SelectItem value="code">Code</SelectItem>
           <SelectItem value="text">Text</SelectItem>
+          <SelectItem value="zip">ZIP</SelectItem>
         </SelectContent>
       </Select>
 

@@ -11,6 +11,7 @@ import {
   extractPdfText,
   extractDocxText,
   extractXlsxData,
+  extractZipContents,
   generateThumbnail,
 } from '@/lib/server/document-processors';
 import { logger } from '@/lib/logger';
@@ -56,6 +57,17 @@ async function processDocument(
       const result = await extractXlsxData(filePath);
       if (result) {
         return { sheets: result.sheets };
+      }
+      return null;
+    }
+    case 'zip': {
+      const result = await extractZipContents(filePath);
+      if (result) {
+        return {
+          entries: result.entries,
+          fileCount: result.entries.filter((e) => !e.isDir).length,
+          extractedText: result.extractedText || undefined,
+        };
       }
       return null;
     }

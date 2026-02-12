@@ -8,6 +8,7 @@ export const fileTypeSchema = z.enum([
   'csv',
   'code',
   'text',
+  'zip',
   'other',
 ]);
 

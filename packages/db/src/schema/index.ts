@@ -37,7 +37,7 @@ export const files = sqliteTable('files', {
   size: integer('size').notNull(),
   path: text('path').notNull(),
   type: text('type', {
-    enum: ['image', 'pdf', 'docx', 'xlsx', 'csv', 'code', 'text', 'other'],
+    enum: ['image', 'pdf', 'docx', 'xlsx', 'csv', 'code', 'text', 'zip', 'other'],
   }).notNull(),
   metadata: text('metadata', { mode: 'json' }),
   direction: text('direction', { enum: ['upload', 'generated'] }).notNull(),
