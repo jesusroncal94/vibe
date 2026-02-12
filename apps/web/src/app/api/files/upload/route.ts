@@ -7,9 +7,61 @@ import {
   extractTextContent,
   FILE_LIMITS,
 } from '@/lib/file-utils';
+import {
+  extractPdfText,
+  extractDocxText,
+  extractXlsxData,
+  generateThumbnail,
+} from '@/lib/server/document-processors';
+import { logger } from '@/lib/logger';
 
 function getUploadsDir(): string {
   return process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
+}
+
+async function processDocument(
+  filePath: string,
+  fileType: string,
+  monthDir: string,
+  safeName: string,
+): Promise<Record<string, unknown> | null> {
+  const uploadsDir = getUploadsDir();
+
+  switch (fileType) {
+    case 'image': {
+      const thumbName = `thumb_${safeName.replace(/\.[^.]+$/, '.jpg')}`;
+      const thumbPath = join(uploadsDir, monthDir, thumbName);
+      const thumbRelative = join(monthDir, thumbName);
+      const result = await generateThumbnail(filePath, thumbPath);
+      if (result) {
+        return { thumbnailPath: thumbRelative, width: result.width, height: result.height };
+      }
+      return null;
+    }
+    case 'pdf': {
+      const result = await extractPdfText(filePath);
+      if (result) {
+        return { extractedText: result.text, pageCount: result.pageCount };
+      }
+      return null;
+    }
+    case 'docx': {
+      const result = await extractDocxText(filePath);
+      if (result) {
+        return { extractedText: result.text, html: result.html };
+      }
+      return null;
+    }
+    case 'xlsx': {
+      const result = await extractXlsxData(filePath);
+      if (result) {
+        return { sheets: result.sheets };
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -59,7 +111,21 @@ export async function POST(request: Request) {
     await writeFile(filePath, buffer);
 
     const fileType = classifyFileType(entry.type, entry.name);
+
+    // Text-based extraction (text/code/csv)
     const extractedText = await extractTextContent(filePath, entry.type, fileType);
+
+    // Rich document processing (images, PDFs, DOCX, XLSX)
+    let docMetadata: Record<string, unknown> | null = null;
+    try {
+      docMetadata = await processDocument(filePath, fileType, monthDir, safeName);
+    } catch (err) {
+      logger.error({ err, fileType, filePath }, 'Document processing failed');
+    }
+
+    const metadata: Record<string, unknown> = {};
+    if (extractedText) metadata.extractedText = extractedText;
+    if (docMetadata) Object.assign(metadata, docMetadata);
 
     const record = createFile({
       messageId: null,
@@ -70,7 +136,7 @@ export async function POST(request: Request) {
       size: entry.size,
       path: relativePath,
       type: fileType,
-      metadata: extractedText ? { extractedText } : null,
+      metadata: Object.keys(metadata).length > 0 ? metadata : null,
       direction: 'upload',
     });
 

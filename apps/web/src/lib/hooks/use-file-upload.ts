@@ -16,8 +16,43 @@ interface UploadedFileResponse {
   mimeType: string;
 }
 
+function xhrUpload(
+  formData: FormData,
+  onProgress: (percent: number) => void,
+): Promise<UploadedFileResponse[]> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/files/upload');
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText) as UploadedFileResponse[]);
+      } else {
+        try {
+          const err = JSON.parse(xhr.responseText) as { error: string };
+          reject(new Error(err.error));
+        } catch {
+          reject(new Error(`Upload failed: ${xhr.status}`));
+        }
+      }
+    });
+
+    xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+    xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+    xhr.send(formData);
+  });
+}
+
 export function useFileUpload(conversationId: string | null) {
-  const { addPendingFile, pendingFiles, setUploadingCount } = useChatStore();
+  const { addPendingFile, pendingFiles, setUploadingCount, setUploadProgress, clearUploadProgress } =
+    useChatStore();
 
   const uploadFiles = useCallback(
     async (fileList: File[]) => {
@@ -31,6 +66,7 @@ export function useFileUpload(conversationId: string | null) {
       }
 
       setUploadingCount(filesToUpload.length);
+      setUploadProgress('batch', 0);
 
       try {
         const formData = new FormData();
@@ -41,17 +77,9 @@ export function useFileUpload(conversationId: string | null) {
           formData.append('files', file);
         }
 
-        const response = await fetch('/api/files/upload', {
-          method: 'POST',
-          body: formData,
+        const results = await xhrUpload(formData, (percent) => {
+          setUploadProgress('batch', percent);
         });
-
-        if (!response.ok) {
-          const err = (await response.json()) as { error: string };
-          throw new Error(err.error);
-        }
-
-        const results = (await response.json()) as UploadedFileResponse[];
 
         for (let i = 0; i < results.length; i++) {
           const result = results[i]!;
@@ -74,9 +102,10 @@ export function useFileUpload(conversationId: string | null) {
         }
       } finally {
         setUploadingCount(0);
+        clearUploadProgress();
       }
     },
-    [conversationId, pendingFiles.length, addPendingFile, setUploadingCount],
+    [conversationId, pendingFiles.length, addPendingFile, setUploadingCount, setUploadProgress, clearUploadProgress],
   );
 
   return { uploadFiles, isUploading: useChatStore((s) => s.uploadingCount > 0) };

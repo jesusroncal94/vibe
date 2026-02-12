@@ -2,6 +2,7 @@
 
 import { X, FileText, Image, FileSpreadsheet, FileCode, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useChatStore } from '@/lib/stores/chat-store';
 import type { PendingFile } from '@/lib/stores/chat-store';
 
 interface FileChipProps {
@@ -34,29 +35,40 @@ function formatSize(bytes: number): string {
 }
 
 export function FileChip({ file, onRemove }: FileChipProps) {
+  const batchProgress = useChatStore((s) => s.uploadProgress.batch);
+  const isUploading = batchProgress !== undefined && batchProgress < 100;
+
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm">
-      {file.previewUrl ? (
-        <img
-          src={file.previewUrl}
-          alt={file.originalName}
-          className="h-8 w-8 shrink-0 rounded object-cover"
+    <div className="relative flex items-center gap-2 overflow-hidden rounded-lg border bg-muted/50 px-3 py-1.5 text-sm">
+      {isUploading && (
+        <div
+          className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-300"
+          style={{ width: `${batchProgress}%` }}
         />
-      ) : (
-        fileIcon(file.type)
       )}
-      <span className="max-w-[120px] truncate" title={file.originalName}>
-        {file.originalName}
-      </span>
-      <span className="text-xs text-muted-foreground">{formatSize(file.size)}</span>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-5 w-5 shrink-0 rounded-full"
-        onClick={() => onRemove(file.id)}
-      >
-        <X className="h-3 w-3" />
-      </Button>
+      <div className="relative flex items-center gap-2">
+        {file.previewUrl ? (
+          <img
+            src={file.previewUrl}
+            alt={file.originalName}
+            className="h-8 w-8 shrink-0 rounded object-cover"
+          />
+        ) : (
+          fileIcon(file.type)
+        )}
+        <span className="max-w-[120px] truncate" title={file.originalName}>
+          {file.originalName}
+        </span>
+        <span className="text-xs text-muted-foreground">{formatSize(file.size)}</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5 shrink-0 rounded-full"
+          onClick={() => onRemove(file.id)}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   );
 }

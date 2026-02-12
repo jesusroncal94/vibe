@@ -1,4 +1,4 @@
-import { eq, desc, and, like, or, inArray } from 'drizzle-orm';
+import { eq, desc, and, like, or, inArray, count, sum, sql } from 'drizzle-orm';
 import { generateId } from '@vibe/shared';
 import { getDb } from './client';
 import { conversations, messages, tags, conversationTags, settings, files } from './schema/index';
@@ -297,4 +297,100 @@ export function attachFilesToMessage(fileIds: string[], messageId: string) {
 export function deleteFile(id: string) {
   const db = getDb();
   db.delete(files).where(eq(files.id, id)).run();
+}
+
+export function updateFileMetadata(id: string, metadata: Record<string, unknown>) {
+  const db = getDb();
+  db.update(files).set({ metadata }).where(eq(files.id, id)).run();
+}
+
+export function getFilesWithPagination(opts: {
+  search?: string;
+  type?: string;
+  direction?: string;
+  conversationId?: string;
+  offset: number;
+  limit: number;
+}): { files: (typeof files.$inferSelect)[]; total: number } {
+  const db = getDb();
+  const conditions = [];
+
+  if (opts.search) {
+    conditions.push(like(files.originalName, `%${opts.search}%`));
+  }
+  if (opts.type) {
+    conditions.push(eq(files.type, opts.type as 'image' | 'pdf' | 'docx' | 'xlsx' | 'csv' | 'code' | 'text' | 'other'));
+  }
+  if (opts.direction) {
+    conditions.push(eq(files.direction, opts.direction as 'upload' | 'generated'));
+  }
+  if (opts.conversationId) {
+    conditions.push(eq(files.conversationId, opts.conversationId));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const totalResult = db
+    .select({ count: count() })
+    .from(files)
+    .where(where)
+    .get();
+  const total = totalResult?.count ?? 0;
+
+  const rows = db
+    .select()
+    .from(files)
+    .where(where)
+    .orderBy(desc(files.createdAt))
+    .offset(opts.offset)
+    .limit(opts.limit)
+    .all();
+
+  return { files: rows, total };
+}
+
+export function deleteFiles(ids: string[]) {
+  if (ids.length === 0) return;
+  const db = getDb();
+  db.delete(files).where(inArray(files.id, ids)).run();
+}
+
+export function getFileStats(): {
+  totalFiles: number;
+  totalSize: number;
+  byType: Record<string, { count: number; size: number }>;
+} {
+  const db = getDb();
+
+  const totals = db
+    .select({
+      totalFiles: count(),
+      totalSize: sum(files.size),
+    })
+    .from(files)
+    .get();
+
+  const byTypeRows = db
+    .select({
+      type: files.type,
+      fileCount: count(),
+      totalSize: sum(files.size),
+    })
+    .from(files)
+    .groupBy(files.type)
+    .all();
+
+  const byType: Record<string, { count: number; size: number }> = {};
+  for (const row of byTypeRows) {
+    byType[row.type] = {
+      count: row.fileCount,
+      size: Number(row.totalSize ?? 0),
+    };
+  }
+
+  return {
+    totalFiles: totals?.totalFiles ?? 0,
+    totalSize: Number(totals?.totalSize ?? 0),
+    byType,
+  };
 }

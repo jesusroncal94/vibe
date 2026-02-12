@@ -26,4 +26,8 @@ export {
   getFilesByConversation,
   attachFilesToMessage,
   deleteFile,
+  updateFileMetadata,
+  getFilesWithPagination,
+  deleteFiles,
+  getFileStats,
 } from './queries';

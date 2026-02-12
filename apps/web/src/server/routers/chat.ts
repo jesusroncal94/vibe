@@ -44,6 +44,7 @@ export const chatRouter = router({
           size: f.size,
           type: f.type,
           mimeType: f.mimeType,
+          metadata: f.metadata as Record<string, unknown> | null,
         }));
         return { ...msg, files };
       });

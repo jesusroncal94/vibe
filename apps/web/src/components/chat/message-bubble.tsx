@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { User, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeBlock } from './code-block';
+import { MermaidBlockLazy } from './mermaid-block-lazy';
+import { ExportMenu } from './export-menu';
 import { FileAttachment } from './file-attachment';
 import type { FileAttachmentData } from './file-attachment';
 
@@ -14,6 +16,8 @@ interface MessageBubbleProps {
   content: string;
   isStreaming?: boolean;
   files?: FileAttachmentData[];
+  messageId?: string;
+  conversationId?: string;
 }
 
 function tableToCsv(node: React.ReactNode): string {
@@ -60,11 +64,59 @@ function tableToCsv(node: React.ReactNode): string {
   return rows.map((r) => r.join(',')).join('\n');
 }
 
-export function MessageBubble({ role, content, isStreaming = false, files }: MessageBubbleProps) {
+function tableToData(node: React.ReactNode): { headers: string[]; rows: string[][] } {
+  const allRows: string[][] = [];
+
+  function extractRows(children: React.ReactNode) {
+    React.Children.forEach(children, (child) => {
+      if (!React.isValidElement(child)) return;
+      const props = child.props as { children?: React.ReactNode };
+      if (child.type === 'tr') {
+        const cells: string[] = [];
+        React.Children.forEach(props.children, (cell) => {
+          if (React.isValidElement(cell)) {
+            const cellProps = cell.props as { children?: React.ReactNode };
+            cells.push(extractText(cellProps.children));
+          }
+        });
+        allRows.push(cells);
+      } else if (props.children) {
+        extractRows(props.children);
+      }
+    });
+  }
+
+  function extractText(node: React.ReactNode): string {
+    if (typeof node === 'string') return node;
+    if (typeof node === 'number') return String(node);
+    if (!node) return '';
+    if (Array.isArray(node)) return node.map(extractText).join('');
+    if (React.isValidElement(node)) {
+      const props = node.props as { children?: React.ReactNode };
+      return extractText(props.children);
+    }
+    return '';
+  }
+
+  extractRows(node);
+  const headers = allRows[0] ?? [];
+  const rows = allRows.slice(1);
+  return { headers, rows };
+}
+
+export function MessageBubble({
+  role,
+  content,
+  isStreaming = false,
+  files,
+  messageId,
+  conversationId,
+}: MessageBubbleProps) {
   const isUser = role === 'user';
+  const showExport = !isUser && content.length > 50 && !isStreaming;
 
   return (
-    <div className={cn('flex gap-3 px-4 py-4', isUser ? 'justify-end' : 'justify-start')}>
+    <div className={cn('group/msg flex gap-3 px-4 py-4', isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
           <Bot className="h-4 w-4 text-primary" />
@@ -73,12 +125,22 @@ export function MessageBubble({ role, content, isStreaming = false, files }: Mes
 
       <div
         className={cn(
-          'max-w-[80%] rounded-2xl px-4 py-3 text-sm',
+          'relative max-w-[80%] rounded-2xl px-4 py-3 text-sm',
           isUser
             ? 'bg-primary text-primary-foreground'
             : 'bg-muted',
         )}
       >
+        {showExport && (
+          <div className="absolute -right-1 -top-1">
+            <ExportMenu
+              content={content}
+              messageId={messageId}
+              conversationId={conversationId}
+              hasTable={content.includes('|')}
+            />
+          </div>
+        )}
         {isUser ? (
           <>
             <p className="whitespace-pre-wrap">{content}</p>
@@ -94,8 +156,12 @@ export function MessageBubble({ role, content, isStreaming = false, files }: Mes
                   const codeString = String(children).replace(/\n$/, '');
 
                   if (match) {
+                    const lang = match[1];
+                    if (lang === 'mermaid') {
+                      return <MermaidBlockLazy code={codeString} />;
+                    }
                     return (
-                      <CodeBlock language={match[1]} filename={match[2]}>
+                      <CodeBlock language={lang} filename={match[2]}>
                         {codeString}
                       </CodeBlock>
                     );
@@ -136,6 +202,28 @@ export function MessageBubble({ role, content, isStreaming = false, files }: Mes
                     URL.revokeObjectURL(url);
                   };
 
+                  const handleDownloadXlsx = async () => {
+                    const data = tableToData(children);
+                    const res = await fetch('/api/files/generate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        type: 'xlsx',
+                        tableData: [{ headers: data.headers, rows: data.rows, sheetName: 'Table' }],
+                        filename: 'table.xlsx',
+                        messageId,
+                        conversationId,
+                      }),
+                    });
+                    if (res.ok) {
+                      const result = (await res.json()) as { id: string };
+                      const a = document.createElement('a');
+                      a.href = `/api/files/${result.id}`;
+                      a.download = 'table.xlsx';
+                      a.click();
+                    }
+                  };
+
                   return (
                     <div className="my-3">
                       <div className="overflow-x-auto">
@@ -143,13 +231,22 @@ export function MessageBubble({ role, content, isStreaming = false, files }: Mes
                           {children}
                         </table>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleDownloadCsv}
-                        className="mt-1 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        Download CSV
-                      </button>
+                      <div className="mt-1 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleDownloadCsv}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Download CSV
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDownloadXlsx}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Download XLSX
+                        </button>
+                      </div>
                     </div>
                   );
                 },

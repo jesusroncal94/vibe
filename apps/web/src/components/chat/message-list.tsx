@@ -16,9 +16,10 @@ interface MessageListProps {
   messages: MessageData[];
   streamingContent: string;
   isStreaming: boolean;
+  conversationId?: string;
 }
 
-export function MessageList({ messages, streamingContent, isStreaming }: MessageListProps) {
+export function MessageList({ messages, streamingContent, isStreaming, conversationId }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,7 +30,14 @@ export function MessageList({ messages, streamingContent, isStreaming }: Message
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-3xl py-4">
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} role={msg.role} content={msg.content} files={msg.files} />
+          <MessageBubble
+            key={msg.id}
+            role={msg.role}
+            content={msg.content}
+            files={msg.files}
+            messageId={msg.id}
+            conversationId={conversationId}
+          />
         ))}
 
         {isStreaming && streamingContent && (

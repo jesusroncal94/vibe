@@ -19,6 +19,7 @@ interface ChatState {
   abortController: AbortController | null;
   pendingFiles: PendingFile[];
   uploadingCount: number;
+  uploadProgress: Record<string, number>;
   setActiveConversation: (id: string | null) => void;
   startStreaming: (abortController: AbortController) => void;
   appendStreamContent: (content: string) => void;
@@ -28,6 +29,8 @@ interface ChatState {
   removePendingFile: (id: string) => void;
   clearPendingFiles: () => void;
   setUploadingCount: (count: number) => void;
+  setUploadProgress: (fileKey: string, progress: number) => void;
+  clearUploadProgress: () => void;
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
@@ -37,6 +40,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   abortController: null,
   pendingFiles: [],
   uploadingCount: 0,
+  uploadProgress: {},
 
   setActiveConversation: (id) => set({ activeConversationId: id }),
 
@@ -80,4 +84,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   clearPendingFiles: () => set({ pendingFiles: [] }),
 
   setUploadingCount: (count) => set({ uploadingCount: count }),
+
+  setUploadProgress: (fileKey, progress) =>
+    set((state) => ({
+      uploadProgress: { ...state.uploadProgress, [fileKey]: progress },
+    })),
+
+  clearUploadProgress: () => set({ uploadProgress: {} }),
 }));

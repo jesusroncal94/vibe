@@ -1,7 +1,33 @@
 'use client';
 
-import { Download, FileText, Image, FileSpreadsheet, FileCode, File } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import {
+  Download,
+  FileText,
+  Image,
+  FileSpreadsheet,
+  FileCode,
+  File,
+  Eye,
+  ScanSearch,
+  PanelRight,
+  Loader2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FilePreviewDialog } from '@/components/files/file-preview-dialog';
+import { useUiStore } from '@/lib/stores/ui-store';
+
+interface FileMetadata {
+  extractedText?: string;
+  thumbnailPath?: string;
+  width?: number;
+  height?: number;
+  pageCount?: number;
+  html?: string;
+  sheets?: Array<{ name: string; headers: string[]; rowCount: number; preview: string[][] }>;
+  ocrText?: string;
+  ocrConfidence?: number;
+}
 
 export interface FileAttachmentData {
   id: string;
@@ -9,6 +35,7 @@ export interface FileAttachmentData {
   size: number;
   type: string;
   mimeType: string;
+  metadata?: FileMetadata | null;
 }
 
 interface FileAttachmentProps {
@@ -39,46 +66,123 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function SingleAttachment({ file }: { file: FileAttachmentData }) {
+function SingleAttachment({ file, onPreview }: { file: FileAttachmentData; onPreview: () => void }) {
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrDone, setOcrDone] = useState(!!file.metadata?.ocrText);
+  const openFilePanel = useUiStore((s) => s.openFilePanel);
+
   const isImage = file.type === 'image';
   const fileUrl = `/api/files/${file.id}`;
+  const thumbnailUrl = isImage ? `/api/files/${file.id}/thumbnail` : undefined;
+
+  const handleOcr = useCallback(async () => {
+    setOcrLoading(true);
+    try {
+      const res = await fetch(`/api/files/${file.id}/ocr`, { method: 'POST' });
+      if (res.ok) {
+        setOcrDone(true);
+      }
+    } finally {
+      setOcrLoading(false);
+    }
+  }, [file.id]);
 
   if (isImage) {
     return (
-      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block">
-        <img
-          src={fileUrl}
-          alt={file.originalName}
-          className="max-h-48 rounded-lg border object-contain"
-        />
-      </a>
+      <div className="group relative">
+        <button type="button" onClick={onPreview} className="block cursor-pointer">
+          <img
+            src={thumbnailUrl ?? fileUrl}
+            alt={file.originalName}
+            className="max-h-48 rounded-lg border object-contain transition-opacity group-hover:opacity-90"
+          />
+        </button>
+        <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => openFilePanel(file.id)}
+          >
+            <PanelRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
     );
   }
+
+  const hasPdfNoText =
+    file.type === 'pdf' && !file.metadata?.extractedText && !file.metadata?.ocrText && !ocrDone;
+  const pageCount = file.metadata?.pageCount;
+  const sheetCount = file.metadata?.sheets?.length;
 
   return (
     <div className="flex items-center gap-2 rounded-lg border bg-background/50 px-3 py-2">
       {fileIcon(file.type)}
-      <span className="max-w-[160px] truncate text-sm" title={file.originalName}>
-        {file.originalName}
-      </span>
-      <span className="text-xs text-muted-foreground">{formatSize(file.size)}</span>
+      <div className="flex flex-col">
+        <span className="max-w-[160px] truncate text-sm" title={file.originalName}>
+          {file.originalName}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {formatSize(file.size)}
+          {pageCount ? ` · ${pageCount} pages` : ''}
+          {sheetCount ? ` · ${sheetCount} sheet${sheetCount > 1 ? 's' : ''}` : ''}
+        </span>
+      </div>
+      {(file.type === 'pdf' || file.type === 'docx' || file.type === 'xlsx') && (
+        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onPreview} title="Preview">
+          <Eye className="h-3 w-3" />
+        </Button>
+      )}
+      {hasPdfNoText && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 shrink-0"
+          onClick={handleOcr}
+          disabled={ocrLoading}
+          title="Run OCR"
+        >
+          {ocrLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ScanSearch className="h-3 w-3" />}
+        </Button>
+      )}
       <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" asChild>
         <a href={fileUrl} download={file.originalName}>
           <Download className="h-3 w-3" />
         </a>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={() => openFilePanel(file.id)}
+        title="Open in panel"
+      >
+        <PanelRight className="h-3 w-3" />
       </Button>
     </div>
   );
 }
 
 export function FileAttachment({ files }: FileAttachmentProps) {
+  const [previewFile, setPreviewFile] = useState<FileAttachmentData | null>(null);
+
   if (files.length === 0) return null;
 
   return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {files.map((file) => (
-        <SingleAttachment key={file.id} file={file} />
-      ))}
-    </div>
+    <>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {files.map((file) => (
+          <SingleAttachment key={file.id} file={file} onPreview={() => setPreviewFile(file)} />
+        ))}
+      </div>
+      <FilePreviewDialog
+        file={previewFile}
+        open={previewFile !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewFile(null);
+        }}
+      />
+    </>
   );
 }
