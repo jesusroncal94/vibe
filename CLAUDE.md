@@ -1,6 +1,6 @@
 # Vibe Platform — Claude Code Context
 
-> **Current Phase: 0 (Scaffolding)**
+> **Current Phase: 2 (Advanced Documents — finishing)**
 > **Owner:** Jesus Roncal (jesus@mindfortress.com)
 > **Stack:** TypeScript monorepo (Turborepo + pnpm)
 
@@ -59,11 +59,13 @@ See `.claude/rules/` for specific instructions per code area.
 
 ## Current phase and immediate goal
 
-**PHASE 0:** Full monorepo scaffold.
-When complete, `pnpm dev` should start Next.js on localhost:3000, `pnpm build` should compile without errors, and the Claude CLI wrapper should be able to execute a prompt and receive a response.
+**PHASE 0:** Complete. Monorepo scaffold, all packages, CI, build, tests.
+**PHASE 1:** Complete. Chat with streaming, file uploads, tags, 3 layouts, settings, keyboard shortcuts.
+**PHASE 2:** ~90% complete. OCR, rich previews, DOCX/XLSX/PDF generation, file gallery, conversation export, mermaid diagrams.
 
-**PHASE 1 (next):** Functional chat with streaming, file uploads, tags, 3 layouts, settings.
-**PHASE 2 (after):** Advanced documents — OCR, rich previews, DOCX/XLSX/PDF generation.
+**Remaining Phase 2 items:** ZIP file handling, encoding detection, PPTX generation, drag-from-panel-to-input, reuse files from gallery, error boundaries, loading skeletons.
+
+**PHASE 3 (next):** Multi-enterprise + intelligent context.
 
 See `docs/migration-plan.md` for the details of each phase.
 

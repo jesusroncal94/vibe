@@ -2,28 +2,29 @@
 
 Multi-enterprise vibe coding platform for Claude Code.
 
-> 🚧 **Under active development** — Phase 0 (Scaffolding)
+> 🚧 **Under active development** — Finishing Phase 2 (Advanced Documents)
 
 ## What is it
 
-A web platform that manages context, history, and tools for Claude Code-assisted development. Designed to handle multiple enterprises and projects with intelligent context hierarchy.
+A professional web platform that replaces the ai-hub Python/Gradio prototype. Manages conversations, files, and tools for Claude Code-assisted development. Designed to scale to multiple enterprises and projects.
 
 ## Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Runtime | Node.js 22 LTS + TypeScript 5.x |
-| Monorepo | Turborepo + pnpm |
-| Web UI | Next.js 15 (App Router) + shadcn/ui |
-| API | tRPC |
-| Database | Drizzle ORM + SQLite |
-| Claude | Claude Code CLI (streaming) |
-| Testing | Vitest + Playwright |
+| Runtime | Node.js 22 LTS + TypeScript 5.x (strict) |
+| Monorepo | Turborepo 2.x + pnpm workspaces |
+| Web UI | Next.js 15 (App Router) + Tailwind CSS 4 + shadcn/ui |
+| API | tRPC + React Query |
+| Database | SQLite (better-sqlite3) |
+| State | zustand (persisted) |
+| Claude | Claude Code CLI via child_process (streaming JSON) |
+| Testing | Vitest |
 
 ## Quick Start
 
 ```bash
-# Requirements: Node.js 22+, pnpm 9+, Claude Code CLI
+# Requirements: Node.js 22+, pnpm 9+, Claude Code CLI installed
 pnpm install
 pnpm dev
 # → http://localhost:3000
@@ -32,11 +33,28 @@ pnpm dev
 ## Structure
 
 ```
-packages/shared/    → Shared types and schemas (Zod)
-packages/db/        → Drizzle ORM + SQLite
-packages/claude/    → Claude Code CLI wrapper
-apps/web/           → Next.js Web UI
+packages/shared/    → Zod schemas, types, shared utilities
+packages/db/        → SQLite schema + queries (auto-creates tables)
+packages/claude/    → Claude Code CLI wrapper (spawn + streaming)
+apps/web/           → Next.js 15 Web UI (App Router)
+docs/               → Architecture + migration plan
+reference/ai-hub/   → Original prototype (read-only)
 ```
+
+## Features
+
+- **Chat with Claude Code** — Real-time streaming, markdown rendering, syntax-highlighted code blocks, mermaid diagrams
+- **File uploads** — Drag & drop, clipboard paste, PDF/DOCX/XLSX/CSV/image support with text extraction
+- **Document generation** — Ask Claude to generate DOCX, XLSX, or PDF files, download inline
+- **Conversation export** — Export as PDF, DOCX, or XLSX
+- **File gallery** — Grid/list view, search, filter by type, batch operations, storage stats
+- **OCR** — Extract text from scanned PDFs via tesseract.js
+- **3 layout modes** — Focus (no sidebar), Minimal, Productivity (sidebar + file panel)
+- **Model selection** — Switch between Sonnet, Opus, and Haiku
+- **Internet access toggle** — Enable/disable web search and fetch tools
+- **Tags** — Organize conversations with colored tags
+- **Settings** — Theme, layout, model, system prompt, internet access
+- **Keyboard shortcuts** — Ctrl+N (new chat), Ctrl+K (search), Ctrl+Shift+S (sidebar), Escape (cancel)
 
 ## Documentation
 
@@ -47,9 +65,9 @@ apps/web/           → Next.js Web UI
 
 - [x] Architecture document
 - [x] Migration plan
-- [ ] **Phase 0:** Scaffold monorepo
-- [ ] **Phase 1:** Web UI + Chat with Claude Code
-- [ ] **Phase 2:** Advanced document handling
+- [x] **Phase 0:** Scaffold monorepo
+- [x] **Phase 1:** Web UI + Chat with Claude Code
+- [~] **Phase 2:** Advanced document handling (90%)
 - [ ] **Phase 3:** Multi-enterprise + intelligent context
 - [ ] **Phase 4:** CLI `vibe` + hooks + MCP servers
 - [ ] **Phase 5+:** Plugins, Agent SDK, enterprise
